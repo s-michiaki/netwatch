@@ -106,7 +106,7 @@ Services/GeoIp.cs            IP → 国の判定とデータベース更新
 Services/RemoteStats.cs      宛先 IP ごとの累計（国別マップ用）
 ViewModels/CountryMapViewModel.cs, CountryMapWindow.xaml  国別マップ画面
 Assets/                      世界地図データ・GeoIP データベース・ライセンス表記
-.github/workflows/release.yml  タグ push で Windows 版をビルドして Release に添付
+.github/workflows/release.yml  Release を公開すると Windows 版をビルドして zip を添付
 ViewModels/                  画面のデータと更新ロジック（MVVM）
 MainWindow.xaml              画面
 ```
