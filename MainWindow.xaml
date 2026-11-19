@@ -1,0 +1,272 @@
+<Window x:Class="NetWatch.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:NetWatch.ViewModels"
+        Title="NetWatch — プロセス通信モニター" Width="1400" Height="800" MinWidth="900" MinHeight="500"
+        Background="{StaticResource Bg}" FontFamily="Yu Gothic UI, Segoe UI" FontSize="13"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <vm:InverseBoolConverter x:Key="Not"/>
+    </Window.Resources>
+
+    <Window.InputBindings>
+        <KeyBinding Key="M" Modifiers="Ctrl" Command="{Binding OpenCountryMapCommand}"/>
+        <KeyBinding Key="R" Modifiers="Ctrl" Command="{Binding ToggleRecordCommand}"/>
+    </Window.InputBindings>
+
+    <DockPanel>
+        <!-- メニュー -->
+        <Menu DockPanel.Dock="Top" Background="{StaticResource Bg}" Foreground="{StaticResource Fg}" Padding="4,2">
+            <MenuItem Header="ファイル(_F)">
+                <MenuItem Header="記録の開始 / 停止" InputGestureText="Ctrl+R" Command="{Binding ToggleRecordCommand}"/>
+                <MenuItem Header="最後の記録を保存…" Command="{Binding SaveRecordCommand}"/>
+                <Separator/>
+                <MenuItem Header="終了(_X)" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+            <MenuItem Header="表示(_V)">
+                <MenuItem Header="🌍 国別の通信先マップ" InputGestureText="Ctrl+M" Command="{Binding OpenCountryMapCommand}"/>
+                <Separator/>
+                <MenuItem Header="UDP を表示" IsCheckable="True" IsChecked="{Binding ShowUdp}"/>
+                <MenuItem Header="待受 (LISTEN) を表示" IsCheckable="True" IsChecked="{Binding ShowListen}"/>
+                <MenuItem Header="TIME_WAIT を表示" IsCheckable="True" IsChecked="{Binding ShowTimeWait}"/>
+                <MenuItem Header="ループバックを隠す" IsCheckable="True" IsChecked="{Binding HideLoopback}"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- 権限バナー -->
+        <Border DockPanel.Dock="Top" Background="#4A3B1C" Padding="12,6"
+                Visibility="{Binding IsNotElevated, Converter={StaticResource BoolToVis}}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="🛡 管理者として再起動" Command="{Binding RestartAsAdminCommand}"/>
+                <TextBlock VerticalAlignment="Center" Foreground="#F5D99A"
+                           Text="通常権限で実行中です。接続先は表示できますが、通信量（↑↓）とドメイン名の取得には管理者権限が必要です。"/>
+            </DockPanel>
+        </Border>
+
+        <!-- ツールバー -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="12,8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <TextBlock Text="{Binding TotalRate}" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Button Content="🌍 国別マップ" Command="{Binding OpenCountryMapCommand}" Margin="0,0,16,0"
+                            ToolTip="宛先 IP をもとに、どの国と多く通信しているかを地図で表示します（Ctrl+M）"/>
+                    <TextBlock Text="{Binding RecordStatus}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#FF8A80"/>
+                    <Grid Margin="0,0,6,0">
+                        <ToggleButton x:Name="TargetToggle" IsEnabled="{Binding IsNotRecording}"
+                                      IsHitTestVisible="{Binding IsOpen, ElementName=TargetPopup, Converter={StaticResource Not}}"
+                                      ToolTip="記録するプロセスを選びます（複数選択可）">
+                            <TextBlock>
+                                <Run Text="🎯 記録対象："/><Run Text="{Binding Targets.Summary, Mode=OneWay}"/><Run Text=" ▾"/>
+                            </TextBlock>
+                        </ToggleButton>
+                        <Popup x:Name="TargetPopup" IsOpen="{Binding IsChecked, ElementName=TargetToggle}" PlacementTarget="{Binding ElementName=TargetToggle}"
+                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" Opened="TargetPopup_Opened"
+                               Closed="TargetPopup_Closed" VerticalOffset="4">
+                            <Border Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                    CornerRadius="6" Padding="12" Width="340" DataContext="{Binding Targets}">
+                                <StackPanel>
+                                    <RadioButton Content="すべてのプロセスを記録" IsChecked="{Binding RecordAll}" GroupName="target"/>
+                                    <RadioButton Content="選択したプロセスだけ記録" IsChecked="{Binding RecordSelected}" GroupName="target"/>
+
+                                    <StackPanel IsEnabled="{Binding RecordSelected}" Margin="0,4,0,0">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsEnabled" Value="False">
+                                                        <Setter Property="Opacity" Value="0.4"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,6"
+                                                 ToolTip="プロセス名で絞り込み"/>
+                                        <ListBox ItemsSource="{Binding ItemsView}" Height="300" Background="{StaticResource Bg}"
+                                                 BorderBrush="{StaticResource Line}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                            <ListBox.ItemContainerStyle>
+                                                <Style TargetType="ListBoxItem">
+                                                    <Setter Property="Padding" Value="4,2"/>
+                                                    <Setter Property="Focusable" Value="False"/>
+                                                </Style>
+                                            </ListBox.ItemContainerStyle>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsChecked}" Margin="0">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}"/>
+                                                            <TextBlock Text="  ● 通信中" Foreground="{StaticResource Down}" FontSize="11" VerticalAlignment="Center"
+                                                                       Visibility="{Binding IsCommunicating, Converter={StaticResource BoolToVis}}"/>
+                                                        </StackPanel>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <DockPanel Margin="0,8,0,0">
+                                            <Button DockPanel.Dock="Right" Content="選択解除" Padding="8,2" Command="{Binding SelectNoneCommand}"/>
+                                            <Button Content="通信中のものをすべて選択" Padding="8,2" HorizontalAlignment="Left"
+                                                    Command="{Binding SelectCommunicatingCommand}"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                    <TextBlock Text="プロセス名で選ぶので、同じアプリの別プロセスや再起動後のプロセスも対象になります。"
+                                               TextWrapping="Wrap" Foreground="{StaticResource FgDim}" FontSize="11" Margin="0,8,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <Button Content="{Binding RecordButtonText}" Command="{Binding ToggleRecordCommand}" Margin="0,0,6,0"
+                            ToolTip="開始から停止までに通信した宛先を記録し、停止時に CSV / JSON で保存します">
+                        <Button.Style>
+                            <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsRecording}" Value="True">
+                                        <Setter Property="Background" Value="#7A2E2E"/>
+                                        <Setter Property="BorderBrush" Value="#C24B4B"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Button.Style>
+                    </Button>
+                    <Button Content="💾 保存" Command="{Binding SaveRecordCommand}" Margin="0,0,6,0"
+                            ToolTip="最後の記録をもう一度保存します"/>
+                    <Button Content="{Binding PauseText}" Command="{Binding TogglePauseCommand}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="NetWatch" FontSize="16" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                    <Grid Width="280" Margin="0,0,18,0">
+                        <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=200}" x:Name="SearchBox"/>
+                        <TextBlock Text="🔍 プロセス名・IP・ドメイン・ポートで絞り込み" Foreground="{StaticResource FgDim}" Margin="8,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                    <CheckBox Content="UDP" IsChecked="{Binding ShowUdp}"/>
+                    <CheckBox Content="待受 (LISTEN)" IsChecked="{Binding ShowListen}"/>
+                    <CheckBox Content="TIME_WAIT" IsChecked="{Binding ShowTimeWait}"/>
+                    <CheckBox Content="ループバックを隠す" IsChecked="{Binding HideLoopback}"/>
+                    <CheckBox Content="逆引き DNS" IsChecked="{Binding ReverseLookup}"
+                              ToolTip="DNS の ETW で名前が分からない IP を PTR レコードで逆引きします"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- ステータスバー -->
+        <Border DockPanel.Dock="Bottom" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="12,4">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding EtwStatus}" Foreground="{StaticResource FgDim}"/>
+                <TextBlock Text="{Binding Status}" Foreground="{StaticResource FgDim}"/>
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="360" MinWidth="220"/>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- プロセス一覧 -->
+            <DockPanel Grid.Column="0">
+                <DockPanel DockPanel.Dock="Top" Margin="10,8">
+                    <Button DockPanel.Dock="Right" Content="すべて表示" Padding="8,2" Command="{Binding ClearProcessFilterCommand}"/>
+                    <TextBlock Text="プロセス" FontWeight="SemiBold" VerticalAlignment="Center" Foreground="{StaticResource FgDim}"/>
+                </DockPanel>
+                <DataGrid ItemsSource="{Binding ProcessesView}" SelectedItem="{Binding SelectedProcess}" Tag="{Binding}">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="🎯 記録対象に追加"
+                                      Command="{Binding PlacementTarget.Tag.AddRecordTargetCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      CommandParameter="{Binding PlacementTarget.SelectedItem.Name, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <MenuItem Header="実行ファイルの場所を開く"
+                                      Command="{Binding PlacementTarget.Tag.OpenLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      CommandParameter="{Binding PlacementTarget.SelectedItem.Path, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="プロセス" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="55" ElementStyle="{StaticResource RightCell}"/>
+                        <DataGridTextColumn Header="接続" Binding="{Binding Connections}" Width="45" ElementStyle="{StaticResource RightCell}"/>
+                        <DataGridTextColumn Header="↑" Binding="{Binding SendRateText}" SortMemberPath="SendRate" Width="75" ElementStyle="{StaticResource UpCell}"/>
+                        <DataGridTextColumn Header="↓" Binding="{Binding RecvRateText}" SortMemberPath="RecvRate" Width="75" ElementStyle="{StaticResource DownCell}"/>
+                    </DataGrid.Columns>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="ToolTip" Value="{Binding Path}"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{StaticResource Selected}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                </DataGrid>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="{StaticResource Line}"/>
+
+            <!-- 接続一覧 -->
+            <DataGrid Grid.Column="2" x:Name="ConnGrid" ItemsSource="{Binding ConnectionsView}" Tag="{Binding}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="プロセス" Binding="{Binding ProcessName}" Width="150"/>
+                    <DataGridTextColumn Header="PID" Binding="{Binding Pid}" Width="60" ElementStyle="{StaticResource RightCell}"/>
+                    <DataGridTextColumn Header="種別" Binding="{Binding ProtocolText}" Width="50"/>
+                    <DataGridTextColumn Header="ローカル" Binding="{Binding Local}" Width="170" ElementStyle="{StaticResource MonoCell}"/>
+                    <DataGridTextColumn Header="リモート" Binding="{Binding Remote}" Width="190" ElementStyle="{StaticResource MonoCell}"/>
+                    <DataGridTextColumn Header="ホスト名" Binding="{Binding Host}" Width="*" MinWidth="160"/>
+                    <DataGridTextColumn Header="状態" Binding="{Binding State}" Width="100"/>
+                    <DataGridTextColumn Header="↑ 速度" Binding="{Binding SendRateText}" SortMemberPath="SendRate" Width="85" ElementStyle="{StaticResource UpCell}"/>
+                    <DataGridTextColumn Header="↓ 速度" Binding="{Binding RecvRateText}" SortMemberPath="RecvRate" Width="85" ElementStyle="{StaticResource DownCell}"/>
+                    <DataGridTextColumn Header="送信計" Binding="{Binding SentText}" SortMemberPath="Sent" Width="80" ElementStyle="{StaticResource RightCell}"/>
+                    <DataGridTextColumn Header="受信計" Binding="{Binding ReceivedText}" SortMemberPath="Received" Width="80" ElementStyle="{StaticResource RightCell}"/>
+                    <DataGridTextColumn Header="検出" Binding="{Binding FirstSeenText}" SortMemberPath="FirstSeen" Width="70" ElementStyle="{StaticResource MonoCell}"/>
+                </DataGrid.Columns>
+
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="ToolTip" Value="{Binding ProcessPath}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNew}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource NewRow}"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsClosed}" Value="True">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </DataTrigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{StaticResource Selected}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="リモート IP をコピー"
+                                  Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem.RemoteIp, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="ホスト名をコピー"
+                                  Command="{Binding PlacementTarget.Tag.CopyCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem.Host, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="IP の情報をブラウザで調べる (ipinfo.io)"
+                                  Command="{Binding PlacementTarget.Tag.LookupIpCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem.RemoteIp, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <MenuItem Header="🎯 このプロセスを記録対象に追加"
+                                  Command="{Binding PlacementTarget.Tag.AddRecordTargetCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem.ProcessName, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="実行ファイルの場所を開く"
+                                  Command="{Binding PlacementTarget.Tag.OpenLocationCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem.ProcessPath, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</Window>

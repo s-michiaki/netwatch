@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>NetWatch</AssemblyName>
+    <RootNamespace>NetWatch</RootNamespace>
+    <Version>0.4.0</Version>
+    <Product>NetWatch</Product>
+    <Description>プロセスごとの通信先をリアルタイムに表示するモニター</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 地図：Natural Earth 1:110m（パブリックドメイン） -->
+    <EmbeddedResource Include="Assets\worldmap.tsv" LogicalName="NetWatch.Assets.worldmap.tsv" />
+    <!-- GeoIP：DB-IP IP to Country Lite（CC BY 4.0） -->
+    <None Include="Assets\dbip-country-lite.mmdb" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MaxMind.Db" Version="5.2.0" />
+    <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="4.0.0" />
+  </ItemGroup>
+
+</Project>
