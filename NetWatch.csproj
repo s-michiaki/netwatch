@@ -10,9 +10,25 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>NetWatch</AssemblyName>
     <RootNamespace>NetWatch</RootNamespace>
-    <Version>0.4.0</Version>
+    <Version>0.4.1</Version>
     <Product>NetWatch</Product>
     <Description>プロセスごとの通信先をリアルタイムに表示するモニター</Description>
+  </PropertyGroup>
+
+  <!--
+    配布形式：NetWatch.exe 1 つにまとめる（単一ファイル・.NET ランタイム同梱）。
+    TraceEvent はネイティブ DLL を自分のフォルダから読み込むので、IncludeAllContentForSelfExtract で
+    起動時に中身を %TEMP%\.net\NetWatch\ に展開してから実行する（2 回目以降は展開済みのものを使う）。
+  -->
+  <PropertyGroup>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
+    <SatelliteResourceLanguages>ja;en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +36,7 @@
     <EmbeddedResource Include="Assets\worldmap.tsv" LogicalName="NetWatch.Assets.worldmap.tsv" />
     <!-- GeoIP：DB-IP IP to Country Lite（CC BY 4.0） -->
     <None Include="Assets\dbip-country-lite.mmdb" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="Assets\THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Assets\THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" Link="THIRD-PARTY-NOTICES.txt" />
   </ItemGroup>
 
   <ItemGroup>

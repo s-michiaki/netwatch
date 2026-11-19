@@ -330,7 +330,7 @@ public sealed class CountryMapViewModel : ObservableObject, IDisposable
     // ───────── 地図データ ─────────
 
     /// <summary>Natural Earth（パブリックドメイン）1:110m の国境を正距円筒図法に変換したもの。</summary>
-    private static List<(string, string, Geometry)> LoadMap()
+    internal static List<(string Iso, string Name, Geometry Geo)> LoadMap()
     {
         if (_mapCache is not null) return _mapCache;
         var list = new List<(string, string, Geometry)>();
