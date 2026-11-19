@@ -1,6 +1,6 @@
 # NetWatch
 
-どのアプリケーションが、どこと、どれくらい通信しているかをリアルタイムに表示する Windows 用モニターです（プロトタイプ v0.4）。
+どのアプリケーションが、どこと、どれくらい通信しているかをリアルタイムに表示する Windows 用モニターです（プロトタイプ v0.4.1）。
 
 ## できること
 
@@ -79,7 +79,8 @@
 
 ## ダウンロード
 
-[Releases](../../releases) から `NetWatch-vX.Y.Z-win-x64.zip` をダウンロードし、展開して `NetWatch.exe` を実行してください（.NET のインストールは不要）。
+[Releases](../../releases) から `NetWatch-vX.Y.Z-win-x64.zip` をダウンロードし、展開して `NetWatch.exe` を実行してください。
+exe 1 つに .NET ランタイムごとまとめてあるので、インストールは不要です（初回起動時のみ `%TEMP%\.net\NetWatch\` への展開で数秒かかります）。
 
 ## ビルドと実行
 
@@ -87,7 +88,8 @@
 
 ```powershell
 dotnet run                 # そのまま起動
-.\publish.ps1              # ランタイム同梱版を publish\ に出力
+.\publish.ps1              # 単一ファイル版（NetWatch.exe）を publish\ に出力
+.\publish\NetWatch.exe --selftest   # 動作確認（結果は selftest.log、管理者で実行すると ETW も確認）
 ```
 
 起動後、上部の「🛡 管理者として再起動」を押すと通信量とドメイン名が表示されるようになります。
@@ -106,7 +108,8 @@ Services/GeoIp.cs            IP → 国の判定とデータベース更新
 Services/RemoteStats.cs      宛先 IP ごとの累計（国別マップ用）
 ViewModels/CountryMapViewModel.cs, CountryMapWindow.xaml  国別マップ画面
 Assets/                      世界地図データ・GeoIP データベース・ライセンス表記
-.github/workflows/release.yml  Release を公開すると Windows 版をビルドして zip を添付
+SelfTest.cs                  --selftest の動作確認（CI で使用）
+.github/workflows/release.yml  Release を公開すると Windows 版をビルド・動作確認して zip を添付
 ViewModels/                  画面のデータと更新ロジック（MVVM）
 MainWindow.xaml              画面
 ```
