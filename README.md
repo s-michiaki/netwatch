@@ -1,4 +1,8 @@
-# NetWatch
+# NetWatch（開発終了）
+
+> [!IMPORTANT]
+> **NetWatch の開発は終了しました。** 機能はすべて [WinResMon](https://github.com/s-michiaki/winresmon) の「通信」タブに統合されています（接続一覧・通信量・DNS 名・通信先の記録・記録対象の選択・国別マップ）。
+> 今後の更新は WinResMon で行います。WinResMon 1.2.0 以降をお使いください。
 
 どのアプリケーションが、どこと、どれくらい通信しているかをリアルタイムに表示する Windows 用モニターです（プロトタイプ v0.4.1）。
 
